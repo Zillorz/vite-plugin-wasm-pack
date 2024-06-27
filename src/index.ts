@@ -36,8 +36,8 @@ function vitePluginWasmPack(
   const modulePaths: string[] = !moduleCrates
     ? []
     : isString(moduleCrates)
-    ? [moduleCrates]
-    : moduleCrates;
+      ? [moduleCrates]
+      : moduleCrates;
   // from ../../my-crate  ->  my_crate_bg.wasm
   const wasmFilename = (cratePath: string) => {
     return path.basename(cratePath).replace(/\-/g, '_') + '_bg.wasm';
@@ -67,7 +67,10 @@ function vitePluginWasmPack(
     name: 'vite-plugin-wasm-pack',
     enforce: 'pre',
     configResolved(resolvedConfig) {
-      config_base = resolvedConfig.base;
+      // Assets directory is never relative
+      config_base = resolvedConfig.base.startsWith('.')
+        ? resolvedConfig.base.substring(1)
+        : resolvedConfig.base;
       config_assetsDir = resolvedConfig.build.assetsDir;
     },
 
@@ -163,10 +166,7 @@ function vitePluginWasmPack(
       middlewares.use((req, res, next) => {
         if (isString(req.url)) {
           const basename = path.basename(req.url);
-          res.setHeader(
-            'Cache-Control',
-            'no-cache, no-store, must-revalidate'
-          );
+          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
           const entry = wasmMap.get(basename);
           if (basename.endsWith('.wasm') && entry) {
             res.writeHead(200, { 'Content-Type': 'application/wasm' });
